@@ -6,6 +6,7 @@ import {
   Download,
   ImageIcon,
   Landmark,
+  ListPlus,
   Minus,
   Plus,
   QrCode,
@@ -25,9 +26,16 @@ interface Person {
   weight: number;
 }
 
+interface Expense {
+  id: string;
+  name: string;
+  amount: number;
+}
+
 interface SplitState {
   title: string;
-  total: number;
+  total: number; // tổng nhập tay, chỉ dùng khi chưa có khoản chi nào
+  expenses?: Expense[]; // optional vì dữ liệu lưu từ bản cũ chưa có
   people: Person[];
 }
 
@@ -68,15 +76,31 @@ export default function SplitBill() {
   const [flash, setFlash] = useState('');
   const [qrFor, setQrFor] = useState<string | null>(null);
   const [bankOpen, setBankOpen] = useState(false);
-  const { title, total, people } = state;
+  const { title, people } = state;
+  const expenses = state.expenses ?? [];
+  // Có khoản chi thì tổng bill = cộng các khoản, không thì dùng tổng nhập tay
+  const total = expenses.length ? expenses.reduce((a, e) => a + e.amount, 0) : state.total;
 
   const update = (patch: Partial<SplitState>) => setState((s) => ({ ...s, ...patch }));
   const updatePerson = (id: string, patch: Partial<Person>) =>
     update({ people: people.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
+  const updateExpense = (id: string, patch: Partial<Expense>) =>
+    update({ expenses: expenses.map((e) => (e.id === id ? { ...e, ...patch } : e)) });
   const updateBank = (patch: Partial<BankAccount>) => setBank((b) => ({ ...b, ...patch }));
 
   const addPerson = () => update({ people: [...people, { id: newId(), name: '', weight: 1 }] });
   const removePerson = (id: string) => update({ people: people.filter((p) => p.id !== id) });
+  const addExpense = () => {
+    const blank = { id: newId(), name: '', amount: 0 };
+    // Lần đầu tách khoản: giữ tổng đang nhập thành khoản đầu tiên để khỏi mất
+    const seed = !expenses.length && total > 0 ? [{ id: newId(), name: '', amount: total }] : [];
+    update({ expenses: [...expenses, ...seed, blank] });
+  };
+  const removeExpense = (id: string) => {
+    const rest = expenses.filter((e) => e.id !== id);
+    // Xoá hết khoản thì quay về nhập tay, giữ nguyên tổng hiện tại
+    update(rest.length ? { expenses: rest } : { expenses: rest, total });
+  };
   const stepWeight = (p: Person, delta: number) =>
     updatePerson(p.id, { weight: Math.max(0, Math.round((p.weight + delta) * 100) / 100) });
 
@@ -88,6 +112,10 @@ export default function SplitBill() {
   );
 
   const displayName = (p: Person, i: number) => p.name.trim() || `Bạn ${i + 1}`;
+  const expenseName = (e: Expense, i: number) => e.name.trim() || `Khoản ${i + 1}`;
+  const billedExpenses = expenses
+    .map((e, i) => ({ name: expenseName(e, i), amount: e.amount }))
+    .filter((e) => e.amount > 0);
   const billTitle = title.trim() || 'Chia bill';
   const bankReady = /^\d{6}$/.test(bank.bin) && bank.account.trim() !== '';
   const bankLine = bankReady
@@ -115,6 +143,7 @@ export default function SplitBill() {
     );
     const text = [
       `${billTitle}: ${formatVnd(total)}đ`,
+      ...billedExpenses.map((e) => `  • ${e.name}: ${formatVnd(e.amount)}đ`),
       '',
       ...DEBT_POEM.map((l) => `📢 ${l}`),
       '',
@@ -133,6 +162,7 @@ export default function SplitBill() {
       total,
       sumWeight,
       bankLine,
+      expenses: billedExpenses,
       poem: DEBT_POEM,
       rows: people
         .map((p, i) => ({
@@ -171,19 +201,66 @@ export default function SplitBill() {
           onChange={(e) => update({ title: e.target.value })}
         />
         <div className="hero-total">
-          <input
-            inputMode="numeric"
-            value={total ? formatVnd(total) : ''}
-            placeholder="0"
-            onChange={(e) => update({ total: parseVnd(e.target.value) })}
-          />
+          {expenses.length ? (
+            <output title="Tổng các khoản chi bên dưới">{formatVnd(total)}</output>
+          ) : (
+            <input
+              inputMode="numeric"
+              value={total ? formatVnd(total) : ''}
+              placeholder="0"
+              onChange={(e) => update({ total: parseVnd(e.target.value) })}
+            />
+          )}
           <span>đ</span>
         </div>
         <div className="hero-meta">
+          {expenses.length > 0 && <span>{expenses.length} khoản</span>}
           <span>{people.length} người</span>
           <span>{sumWeight} suất</span>
           {ready && <span>{formatVnd(Math.round(total / sumWeight))}đ / suất</span>}
         </div>
+      </section>
+
+      <section>
+        <div className="section-head">
+          <h2>Khoản chi</h2>
+          <button className="ghost" onClick={addExpense}>
+            <ListPlus size={15} /> Thêm khoản
+          </button>
+        </div>
+
+        {expenses.length > 0 ? (
+          <ul className="card expenses">
+            {expenses.map((e, i) => (
+              <li key={e.id} className="expense">
+                <span className="expense-index">{i + 1}</span>
+                <input
+                  className="expense-name"
+                  value={e.name}
+                  placeholder={i === 0 ? 'Tiền sân, nước, ăn…' : `Khoản ${i + 1}`}
+                  onChange={(ev) => updateExpense(e.id, { name: ev.target.value })}
+                />
+                <input
+                  className="expense-amount"
+                  inputMode="numeric"
+                  value={e.amount ? formatVnd(e.amount) : ''}
+                  placeholder="0"
+                  onChange={(ev) => updateExpense(e.id, { amount: parseVnd(ev.target.value) })}
+                />
+                <span className="expense-unit">đ</span>
+                <button
+                  className="icon-btn danger"
+                  title="Bỏ khoản này"
+                  onClick={() => removeExpense(e.id)}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="hint">Nhiều khoản thì tách ra cho rõ, tổng bill sẽ tự cộng.</p>
+        )}
       </section>
 
       <section>

@@ -13,6 +13,7 @@ export interface ExportData {
   total: number;
   sumWeight: number;
   bankLine?: string; // "Vietcombank · 0123456789 · NGUYEN VAN A"
+  expenses?: { name: string; amount: number }[]; // các khoản chi, in thành bảng kê dưới hero
   poem?: string[]; // thơ réo nợ, in thành băng rôn nổi bật
   rows: ExportRow[];
 }
@@ -41,6 +42,10 @@ const C = {
 const POEM_FONT = `700 17px ${FONT}`;
 const POEM_LINE = 26;
 const POEM_PAD = 20;
+
+const EXP_PAD = 16;
+const EXP_HEAD = 26; // dòng tiêu đề "KHOẢN CHI"
+const EXP_LINE = 30;
 
 function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
   if (ctx.measureText(text).width <= maxWidth) return text;
@@ -94,11 +99,15 @@ export async function renderBillImage(data: ExportData): Promise<Blob> {
   const poemLines = (data.poem ?? []).flatMap((l) => wrapText(ctx, l, W - PAD * 2 - POEM_PAD * 2));
   const poemBoxH = poemLines.length ? poemLines.length * POEM_LINE + POEM_PAD * 2 : 0;
 
+  const expenses = data.expenses ?? [];
+  const expBoxH = expenses.length ? EXP_PAD + EXP_HEAD + expenses.length * EXP_LINE + EXP_PAD / 2 : 0;
+
   const heroH = 20 + 20 + 44 + 10 + 22 + (data.bankLine ? 40 : 0) + 20;
   const H =
     PAD +
     heroH +
     20 +
+    (expBoxH ? expBoxH + 16 : 0) +
     (poemBoxH ? poemBoxH + 24 : 0) +
     gridRows * cardH +
     (gridRows - 1) * GAP +
@@ -155,6 +164,41 @@ export async function renderBillImage(data: ExportData): Promise<Blob> {
     ctx.fillText(fitText(ctx, `🏦  ${data.bankLine}`, hw - 56), hx + 26, hy + 3);
   }
   y += heroH + 20;
+
+  // Bảng kê khoản chi: tên bên trái, số tiền căn phải, ngăn bằng nét đứt
+  if (expBoxH) {
+    ctx.fillStyle = C.card;
+    ctx.strokeStyle = C.border;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(hx, y, hw, expBoxH, 16);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = C.muted;
+    ctx.font = `700 11px ${FONT}`;
+    ctx.fillText('KHOẢN CHI', hx + EXP_PAD, y + EXP_PAD);
+    let ey = y + EXP_PAD + EXP_HEAD;
+    expenses.forEach((e, i) => {
+      if (i > 0) {
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(hx + EXP_PAD, ey);
+        ctx.lineTo(hx + hw - EXP_PAD, ey);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.fillStyle = C.fg;
+      ctx.font = `700 15px ${FONT}`;
+      const amt = `${formatVnd(e.amount)}đ`;
+      const aw = ctx.measureText(amt).width;
+      ctx.fillText(amt, hx + hw - EXP_PAD - aw, ey + 7);
+      ctx.font = `500 14px ${FONT}`;
+      ctx.fillText(fitText(ctx, e.name, hw - EXP_PAD * 2 - aw - 16), hx + EXP_PAD, ey + 8);
+      ey += EXP_LINE;
+    });
+    y += expBoxH + 16;
+  }
 
   // Sticker thơ réo nợ: nền vàng, nghiêng nhẹ, có tag đỏ
   if (poemBoxH) {
