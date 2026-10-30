@@ -235,3 +235,15 @@ button.chip.active {
 .bank summary .hint {
   font-weight: 400;
 }
+
+.joke {
+  margin-top: 12px;
+  text-align: center;
+  line-height: 1.6;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #facc15;
+  color: #7c2d12;
+  font-weight: 800;
+  transform: rotate(-0.6deg);
+}

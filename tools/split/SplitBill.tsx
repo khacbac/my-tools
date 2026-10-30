@@ -4,6 +4,7 @@ import { formatVnd, parseVnd, splitByWeight } from '@/lib/split';
 import { BANKS, bankName, buildVietQr } from '@/lib/vietqr';
 import QrCanvas from '@/lib/QrCanvas';
 import { renderBillImage } from './exportImage';
+import { DEBT_POEM } from './poem';
 
 interface Person {
   id: string;
@@ -85,7 +86,14 @@ export default function SplitBill() {
     const lines = people.map(
       (p, i) => `- ${displayName(p, i)} (${p.weight} suất): ${formatVnd(shares[i].amount)}đ`,
     );
-    const text = [`${billTitle}: ${formatVnd(total)}đ`, ...lines, bankLine && `CK: ${bankLine}`]
+    const text = [
+      `${billTitle}: ${formatVnd(total)}đ`,
+      '',
+      ...DEBT_POEM.map((l) => `📢 ${l}`),
+      '',
+      ...lines,
+      bankLine && `CK: ${bankLine}`,
+    ]
       .filter(Boolean)
       .join('\n');
     await navigator.clipboard.writeText(text);
@@ -98,6 +106,7 @@ export default function SplitBill() {
       total,
       sumWeight,
       bankLine,
+      poem: DEBT_POEM,
       rows: people
         .map((p, i) => ({
           name: displayName(p, i),
@@ -220,6 +229,12 @@ export default function SplitBill() {
       <div className="actions">
         <button onClick={addPerson}>+ Thêm bạn</button>
         {ready && <span className="hint">Mỗi suất: {formatVnd(Math.round(total / sumWeight))}đ</span>}
+      </div>
+
+      <div className="joke">
+        {DEBT_POEM.map((l) => (
+          <div key={l}>{l}</div>
+        ))}
       </div>
 
       <div className="actions export">

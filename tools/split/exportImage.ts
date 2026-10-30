@@ -13,6 +13,7 @@ export interface ExportData {
   total: number;
   sumWeight: number;
   bankLine?: string; // "Vietcombank · 0123456789 · NGUYEN VAN A"
+  poem?: string[]; // thơ réo nợ, in thành băng rôn nổi bật
   rows: ExportRow[];
 }
 
@@ -30,7 +31,13 @@ const C = {
   fg: '#111827',
   muted: '#6b7280',
   accent: '#2563eb',
+  jokeBg: '#facc15',
+  jokeFg: '#7c2d12',
 };
+
+const JOKE_FONT = `800 19px ${FONT}`;
+const JOKE_LINE = 26;
+const JOKE_PAD = 14;
 
 function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
   if (ctx.measureText(text).width <= maxWidth) return text;
@@ -39,20 +46,42 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) 
   return s + '…';
 }
 
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.split(' ')) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && ctx.measureText(next).width > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = next;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
 /** Vẽ phiếu chia bill (danh sách + QR từng người) thành ảnh PNG */
 export async function renderBillImage(data: ExportData): Promise<Blob> {
   const hasQr = data.rows.some((r) => r.qr);
   const cardH = hasQr ? 16 + 20 + 26 + 10 + QR_SIZE + 16 : 16 + 20 + 26 + 14;
   const gridRows = Math.ceil(data.rows.length / COLS);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d')!;
+
+  // Đo trước số dòng của băng rôn để tính chiều cao ảnh
+  ctx.font = JOKE_FONT;
+  const jokeLines = (data.poem ?? []).flatMap((l) => wrapText(ctx, l, W - PAD * 2 - JOKE_PAD * 2));
+  const jokeH = jokeLines.length ? jokeLines.length * JOKE_LINE + JOKE_PAD * 2 + 16 : 0;
+
   const headerH = 30 + 22 + (data.bankLine ? 26 : 0) + 16;
   const footerH = hasQr ? 34 : 12;
-  const H = PAD + headerH + gridRows * cardH + (gridRows - 1) * GAP + footerH + PAD;
+  const H = PAD + headerH + jokeH + gridRows * cardH + (gridRows - 1) * GAP + footerH + PAD;
 
   const scale = 2; // ảnh nét khi xem trên điện thoại
-  const canvas = document.createElement('canvas');
-  canvas.width = W * scale;
+  canvas.width = W * scale; // đổi kích thước canvas sẽ reset context, nên scale sau bước này
   canvas.height = H * scale;
-  const ctx = canvas.getContext('2d')!;
   ctx.scale(scale, scale);
   ctx.textBaseline = 'top';
 
@@ -76,6 +105,26 @@ export async function renderBillImage(data: ExportData): Promise<Blob> {
     y += 26;
   }
   y += 16;
+
+  // Băng rôn thơ réo nợ: nền vàng, chữ đậm, nghiêng nhẹ cho "lầy"
+  if (jokeLines.length) {
+    const boxH = jokeH - 16;
+    ctx.save();
+    ctx.translate(W / 2, y + boxH / 2);
+    ctx.rotate(-0.012);
+    ctx.fillStyle = C.jokeBg;
+    ctx.beginPath();
+    ctx.roundRect(-(W / 2 - PAD), -boxH / 2, W - PAD * 2, boxH, 10);
+    ctx.fill();
+    ctx.fillStyle = C.jokeFg;
+    ctx.font = JOKE_FONT;
+    jokeLines.forEach((line, i) => {
+      const lw = ctx.measureText(line).width;
+      ctx.fillText(line, -lw / 2, -boxH / 2 + JOKE_PAD + i * JOKE_LINE + 2);
+    });
+    ctx.restore();
+    y += jokeH;
+  }
 
   // Cards
   data.rows.forEach((row, i) => {
