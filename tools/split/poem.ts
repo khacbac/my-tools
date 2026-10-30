@@ -1,9 +1,9 @@
-// Thơ réo nợ vô tri (đúng vần lục bát, nghĩa thì không), in nổi bật trên ảnh và text gửi nhóm
+// Thơ réo nợ vô tri kiểu "chân lý không cãi được" (đúng vần lục bát), in nổi bật trên ảnh và text gửi nhóm
 export const DEBT_POEM = [
-  'Con gà gáy ở trên mây',
-  'Cá voi không biết leo cây bao giờ',
-  'Mì tôm nấu với quả mơ',
-  'Xe đạp hai bánh ai ngờ có chân',
-  'Tiền này bạn nợ mấy lần',
-  'Chim cánh cụt vẫn chưa cần áo mưa',
+  'Ngày xưa thì trước bây giờ',
+  'Lớn lên thì hết tuổi thơ nữa rồi',
+  'Đói thì ăn, mệt thì ngồi',
+  'Nước mà đun mãi thì sôi lên thôi',
+  'Chưa trả thì vẫn nợ tôi',
+  'Trả xong thì sẽ hết rồi, hết luôn',
 ];

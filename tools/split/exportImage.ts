@@ -23,21 +23,24 @@ const GAP = 12;
 const COLS = 2;
 const CARD_W = (W - PAD * 2 - GAP * (COLS - 1)) / COLS;
 const QR_SIZE = CARD_W - 32;
-const FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif";
+const FONT = "'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif";
 
 const C = {
-  bg: '#f3f4f6',
+  bg: '#f4f5fa',
   card: '#ffffff',
-  fg: '#111827',
-  muted: '#6b7280',
-  accent: '#2563eb',
-  jokeBg: '#facc15',
-  jokeFg: '#7c2d12',
+  border: '#e6e8ef',
+  fg: '#16181d',
+  muted: '#6b7080',
+  accent: '#6366f1',
+  chip: '#f1f2f7',
+  poemBg: '#fde047',
+  poemFg: '#713f12',
+  tagBg: '#ef4444',
 };
 
-const JOKE_FONT = `800 19px ${FONT}`;
-const JOKE_LINE = 26;
-const JOKE_PAD = 14;
+const POEM_FONT = `700 17px ${FONT}`;
+const POEM_LINE = 26;
+const POEM_PAD = 20;
 
 function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
   if (ctx.measureText(text).width <= maxWidth) return text;
@@ -62,22 +65,45 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
   return lines;
 }
 
+function pill(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, bg: string, fg: string) {
+  const w = ctx.measureText(text).width + 18;
+  ctx.fillStyle = bg;
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, 22, 11);
+  ctx.fill();
+  ctx.fillStyle = fg;
+  ctx.fillText(text, x + 9, y + 4);
+  return w;
+}
+
 /** Vẽ phiếu chia bill (danh sách + QR từng người) thành ảnh PNG */
 export async function renderBillImage(data: ExportData): Promise<Blob> {
+  // Canvas không tự chờ webfont, phải load trước kẻo vẽ ra font hệ thống
+  await Promise.all(
+    [400, 500, 600, 700, 800].map((w) => document.fonts.load(`${w} 16px 'Be Vietnam Pro'`)),
+  );
+
   const hasQr = data.rows.some((r) => r.qr);
-  const cardH = hasQr ? 16 + 20 + 26 + 10 + QR_SIZE + 16 : 16 + 20 + 26 + 14;
+  const cardH = hasQr ? 16 + 22 + 30 + 12 + QR_SIZE + 16 : 16 + 22 + 30 + 12;
   const gridRows = Math.ceil(data.rows.length / COLS);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
 
-  // Đo trước số dòng của băng rôn để tính chiều cao ảnh
-  ctx.font = JOKE_FONT;
-  const jokeLines = (data.poem ?? []).flatMap((l) => wrapText(ctx, l, W - PAD * 2 - JOKE_PAD * 2));
-  const jokeH = jokeLines.length ? jokeLines.length * JOKE_LINE + JOKE_PAD * 2 + 16 : 0;
+  // Đo trước số dòng của thơ để tính chiều cao ảnh
+  ctx.font = POEM_FONT;
+  const poemLines = (data.poem ?? []).flatMap((l) => wrapText(ctx, l, W - PAD * 2 - POEM_PAD * 2));
+  const poemBoxH = poemLines.length ? poemLines.length * POEM_LINE + POEM_PAD * 2 : 0;
 
-  const headerH = 30 + 22 + (data.bankLine ? 26 : 0) + 16;
-  const footerH = hasQr ? 34 : 12;
-  const H = PAD + headerH + jokeH + gridRows * cardH + (gridRows - 1) * GAP + footerH + PAD;
+  const heroH = 20 + 20 + 44 + 10 + 22 + (data.bankLine ? 40 : 0) + 20;
+  const H =
+    PAD +
+    heroH +
+    20 +
+    (poemBoxH ? poemBoxH + 24 : 0) +
+    gridRows * cardH +
+    (gridRows - 1) * GAP +
+    (hasQr ? 40 : 8) +
+    PAD;
 
   const scale = 2; // ảnh nét khi xem trên điện thoại
   canvas.width = W * scale; // đổi kích thước canvas sẽ reset context, nên scale sau bước này
@@ -88,67 +114,108 @@ export async function renderBillImage(data: ExportData): Promise<Blob> {
   ctx.fillStyle = C.bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Header
+  // Hero gradient: tiêu đề + tổng bill
+  const hx = PAD;
+  const hw = W - PAD * 2;
   let y = PAD;
-  ctx.fillStyle = C.fg;
-  ctx.font = `700 22px ${FONT}`;
-  ctx.fillText(fitText(ctx, data.title, W - PAD * 2), PAD, y);
-  y += 30;
-  ctx.fillStyle = C.muted;
-  ctx.font = `400 14px ${FONT}`;
-  ctx.fillText(`Tổng bill ${formatVnd(data.total)}đ · ${data.sumWeight} suất`, PAD, y);
-  y += 22;
+  const grad = ctx.createLinearGradient(hx, y, hx + hw, y + heroH);
+  grad.addColorStop(0, '#6366f1');
+  grad.addColorStop(0.55, '#8b5cf6');
+  grad.addColorStop(1, '#d946ef');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.roundRect(hx, y, hw, heroH, 20);
+  ctx.fill();
+
+  let hy = y + 20;
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.font = `500 15px ${FONT}`;
+  ctx.fillText(fitText(ctx, data.title, hw - 40), hx + 20, hy);
+  hy += 20;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `800 38px ${FONT}`;
+  ctx.fillText(`${formatVnd(data.total)}đ`, hx + 20, hy);
+  hy += 44 + 10;
+  ctx.font = `500 12px ${FONT}`;
+  let px = hx + 20;
+  px += pill(ctx, `${data.rows.length} người`, px, hy, 'rgba(255,255,255,0.2)', '#fff') + 6;
+  px += pill(ctx, `${data.sumWeight} suất`, px, hy, 'rgba(255,255,255,0.2)', '#fff') + 6;
+  if (data.sumWeight > 0) {
+    pill(ctx, `${formatVnd(Math.round(data.total / data.sumWeight))}đ / suất`, px, hy, 'rgba(255,255,255,0.2)', '#fff');
+  }
+  hy += 22;
   if (data.bankLine) {
-    ctx.fillStyle = C.fg;
-    ctx.font = `500 14px ${FONT}`;
-    ctx.fillText(fitText(ctx, `Chuyển khoản: ${data.bankLine}`, W - PAD * 2), PAD, y);
-    y += 26;
-  }
-  y += 16;
-
-  // Băng rôn thơ réo nợ: nền vàng, chữ đậm, nghiêng nhẹ cho "lầy"
-  if (jokeLines.length) {
-    const boxH = jokeH - 16;
-    ctx.save();
-    ctx.translate(W / 2, y + boxH / 2);
-    ctx.rotate(-0.012);
-    ctx.fillStyle = C.jokeBg;
+    hy += 14;
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.beginPath();
-    ctx.roundRect(-(W / 2 - PAD), -boxH / 2, W - PAD * 2, boxH, 10);
+    ctx.roundRect(hx + 14, hy - 4, hw - 28, 30, 10);
     ctx.fill();
-    ctx.fillStyle = C.jokeFg;
-    ctx.font = JOKE_FONT;
-    jokeLines.forEach((line, i) => {
+    ctx.fillStyle = C.fg;
+    ctx.font = `600 13px ${FONT}`;
+    ctx.fillText(fitText(ctx, `🏦  ${data.bankLine}`, hw - 56), hx + 26, hy + 3);
+  }
+  y += heroH + 20;
+
+  // Sticker thơ réo nợ: nền vàng, nghiêng nhẹ, có tag đỏ
+  if (poemBoxH) {
+    y += 8;
+    ctx.save();
+    ctx.translate(W / 2, y + poemBoxH / 2);
+    ctx.rotate(-0.015);
+    ctx.shadowColor = 'rgba(202,138,4,0.35)';
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 6;
+    ctx.fillStyle = C.poemBg;
+    ctx.beginPath();
+    ctx.roundRect(-hw / 2, -poemBoxH / 2, hw, poemBoxH, 14);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.fillStyle = C.poemFg;
+    ctx.font = POEM_FONT;
+    poemLines.forEach((line, i) => {
       const lw = ctx.measureText(line).width;
-      ctx.fillText(line, -lw / 2, -boxH / 2 + JOKE_PAD + i * JOKE_LINE + 2);
+      ctx.fillText(line, -lw / 2, -poemBoxH / 2 + POEM_PAD + i * POEM_LINE);
     });
+    ctx.font = `800 11px ${FONT}`;
+    const tag = '📢 THƠ RÉO NỢ';
+    const tw = ctx.measureText(tag).width + 20;
+    ctx.fillStyle = C.tagBg;
+    ctx.beginPath();
+    ctx.roundRect(-tw / 2, -poemBoxH / 2 - 11, tw, 22, 11);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.fillText(tag, -tw / 2 + 10, -poemBoxH / 2 - 6);
     ctx.restore();
-    y += jokeH;
+    y += poemBoxH + 16;
   }
 
-  // Cards
+  // Thẻ từng người
   data.rows.forEach((row, i) => {
     const x = PAD + (i % COLS) * (CARD_W + GAP);
     const cy = y + Math.floor(i / COLS) * (cardH + GAP);
 
     ctx.fillStyle = C.card;
+    ctx.strokeStyle = C.border;
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(x, cy, CARD_W, cardH, 12);
+    ctx.roundRect(x, cy, CARD_W, cardH, 16);
     ctx.fill();
+    ctx.stroke();
+
+    ctx.font = `500 12px ${FONT}`;
+    const suat = `${row.weight} suất`;
+    const sw = ctx.measureText(suat).width + 18;
+    pill(ctx, suat, x + CARD_W - 16 - sw, cy + 16, C.chip, C.muted);
 
     ctx.fillStyle = C.fg;
     ctx.font = `600 16px ${FONT}`;
-    const suat = `${row.weight} suất`;
-    ctx.fillText(fitText(ctx, row.name, CARD_W - 32 - 60), x + 16, cy + 16);
-    ctx.fillStyle = C.muted;
-    ctx.font = `400 13px ${FONT}`;
-    ctx.fillText(suat, x + CARD_W - 16 - ctx.measureText(suat).width, cy + 18);
+    ctx.fillText(fitText(ctx, row.name, CARD_W - 32 - sw - 8), x + 16, cy + 18);
 
     ctx.fillStyle = C.accent;
-    ctx.font = `700 20px ${FONT}`;
-    ctx.fillText(`${formatVnd(row.amount)}đ`, x + 16, cy + 36);
+    ctx.font = `800 22px ${FONT}`;
+    ctx.fillText(`${formatVnd(row.amount)}đ`, x + 16, cy + 16 + 26);
 
-    if (row.qr) drawQr(ctx, row.qr, x + 16, cy + 16 + 20 + 26 + 10, QR_SIZE);
+    if (row.qr) drawQr(ctx, row.qr, x + 16, cy + 16 + 22 + 30 + 12, QR_SIZE);
   });
 
   if (hasQr) {
