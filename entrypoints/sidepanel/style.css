@@ -329,17 +329,34 @@ main {
   font-weight: 500;
 }
 
-.expense-amount {
-  width: 96px;
+/* Ô tiền có nền riêng để nhìn ra là chỗ nhập, không lẫn với nhãn */
+.expense .expense-amount {
+  width: 120px;
+  padding: 5px 24px 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
   text-align: right;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.expense .expense-amount:focus {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.expense .expense-amount::placeholder {
+  font-weight: 500;
 }
 
 .expense-unit {
-  margin-left: -6px;
+  margin-left: -26px;
+  width: 18px;
   font-weight: 700;
   color: var(--muted);
+  pointer-events: none;
 }
 
 /* ---------- Thành viên ---------- */

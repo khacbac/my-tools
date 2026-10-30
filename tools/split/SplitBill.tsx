@@ -239,12 +239,17 @@ export default function SplitBill() {
                   value={e.name}
                   placeholder={i === 0 ? 'Tiền sân, nước, ăn…' : `Khoản ${i + 1}`}
                   onChange={(ev) => updateExpense(e.id, { name: ev.target.value })}
+                  onBlur={() => {
+                    // Lỡ gõ số tiền vào ô tên thì chuyển sang ô tiền giúp
+                    if (!e.amount && /^[\d.,\s]+$/.test(e.name) && parseVnd(e.name))
+                      updateExpense(e.id, { name: '', amount: parseVnd(e.name) });
+                  }}
                 />
                 <input
                   className="expense-amount"
                   inputMode="numeric"
                   value={e.amount ? formatVnd(e.amount) : ''}
-                  placeholder="0"
+                  placeholder="Số tiền"
                   onChange={(ev) => updateExpense(e.id, { amount: parseVnd(ev.target.value) })}
                 />
                 <span className="expense-unit">đ</span>
