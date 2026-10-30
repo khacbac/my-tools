@@ -1,0 +1,174 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #6b7280;
+  --border: #d0d7de;
+  --accent: #2563eb;
+  --accent-fg: #ffffff;
+  --row: #f6f8fa;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1b1d21;
+    --fg: #e6e6e6;
+    --muted: #9ca3af;
+    --border: #3a3f47;
+    --accent: #3b82f6;
+    --row: #24272c;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.app {
+  padding: 12px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  border: none;
+  background: none;
+  color: var(--muted);
+  padding: 6px 10px;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+}
+
+.tab.active {
+  color: var(--fg);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+input,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+input[type='radio'] {
+  width: auto;
+}
+
+button {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--row);
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+button.icon {
+  padding: 2px 8px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 18px;
+}
+
+.field {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.field span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.money {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.people {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+}
+
+.people th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px;
+}
+
+.people td {
+  padding: 3px 4px;
+}
+
+.people .weight {
+  width: 56px;
+}
+
+.people .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.people .center {
+  text-align: center;
+}
+
+.people tfoot td {
+  border-top: 1px solid var(--border);
+  font-weight: 600;
+  padding-top: 6px;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 12px;
+}
