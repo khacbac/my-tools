@@ -13,7 +13,7 @@ pnpm test
 
 ## Tiện ích
 
-- **Chia bill** (`tools/split`): chia bill theo số suất mỗi người (số buổi, số phần, ...), làm tròn 1.000đ, tiền lẻ dồn cho người được chọn ở cột "Gánh lẻ". Dữ liệu tự lưu.
+- **Chia bill** (`tools/split`): chia bill theo số suất mỗi người (số buổi, số phần, ...), giữ giá gốc (không làm tròn nghìn). Dữ liệu tự lưu.
 
 ## Thêm tiện ích mới
 
